@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreeRTOS vs Bare-metal Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/three@0.155.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/animejs@3.2.1/lib/anime.min.js"></script>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center p-4">
+    <h1 class="text-xl font-bold mb-4">FreeRTOS vs Bare-metal (Super Loop)</h1>
+    <div id="app" class="w-full max-w-4xl"></div>
+    <script type="text/babel">
+        const {{ useEffect, useRef }} = React;
+
+        function SchedulerScene({ mode }) {{
+            const canvasRef = useRef();
+            useEffect(() => {{
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({{ canvas: canvasRef.current, alpha: true }});
+                renderer.setSize(300, 200);
+
+                const geometry = new THREE.BoxGeometry();
+                const materials = [
+                    new THREE.MeshBasicMaterial({{ color: '#ff5555' }}),
+                    new THREE.MeshBasicMaterial({{ color: '#55ff55' }}),
+                    new THREE.MeshBasicMaterial({{ color: '#5555ff' }}),
+                ];
+
+                const cubes = materials.map((mat, i) => {{
+                    const cube = new THREE.Mesh(geometry, mat);
+                    cube.position.x = (i - 1) * 1.5;
+                    scene.add(cube);
+                    return cube;
+                }});
+
+                camera.position.z = 5;
+
+                const animate = () => {{
+                    requestAnimationFrame(animate);
+                    renderer.render(scene, camera);
+                }};
+                animate();
+
+                if (mode === 'freertos') {{
+                    anime({{
+                        targets: cubes.map(c => c.rotation),
+                        y: 2 * Math.PI,
+                        delay: anime.stagger(500),
+                        duration: 1500,
+                        loop: true,
+                        easing: 'easeInOutSine'
+                    }});
+                }} else {{
+                    // super loop: one cube at a time
+                    anime({{
+                        targets: cubes[0].rotation,
+                        y: 2 * Math.PI,
+                        duration: 1500,
+                        loop: true,
+                        easing: 'easeInOutSine'
+                    }});
+                }}
+            }}, [mode]);
+            return <canvas ref={{canvasRef}} className="bg-transparent" />;
+        }}
+
+        function App() {{
+            return (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex flex-col items-center">
+                        <h2 className="font-semibold">FreeRTOS (Context Switching)</h2>
+                        <SchedulerScene mode="freertos" />
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <h2 className="font-semibold">Bare-metal (Super Loop)</h2>
+                        <SchedulerScene mode="bare" />
+                    </div>
+                </div>
+            );
+        }}
+
+        ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+    </script>
+</body>
+</html>
